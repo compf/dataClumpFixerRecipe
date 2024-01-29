@@ -26,6 +26,10 @@ import org.openrewrite.internal.lang.NonNull;
 import org.openrewrite.java.*;
 import org.openrewrite.java.search.UsesMethod;
 import org.openrewrite.java.tree.J;
+import org.openrewrite.java.tree.JavaCoordinates;
+import org.openrewrite.java.tree.J.MethodDeclaration;
+import org.openrewrite.marker.Range;
+
 import com.google.gson.Gson;
 @Value
 @EqualsAndHashCode(callSuper = true)
@@ -241,51 +245,15 @@ final String methodParameterDCTest =
     }
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        System.out.println("getVisitor() called "+System.getProperty("user.dir"));
-        return Preconditions.check(
-            // Any change to the AST made by the preconditions check will lead to the visitor returned by Recipe
-            // .getVisitor() being applied
-            // No changes made by the preconditions check will be kept
-            Preconditions.or(new UsesMethod<>(NEW_ARRAY_LIST),
-                new UsesMethod<>(NEW_ARRAY_LIST_ITERABLE),
-                new UsesMethod<>(NEW_ARRAY_LIST_CAPACITY)),
-            // To avoid stale state persisting between cycles, getVisitor() should always return a new instance of
-            // its visitor
-            new JavaVisitor<ExecutionContext>() {
-                private final JavaTemplate newArrayList = JavaTemplate.builder("new ArrayList<>()")
-                    .imports("java.util.ArrayList")
-                    .build();
-
-                private final JavaTemplate newArrayListIterable =
-                    JavaTemplate.builder("new ArrayList<>(#{any(java.util.Collection)})")
-                    .imports("java.util.ArrayList")
-                    .build();
-
-                private final JavaTemplate newArrayListCapacity =
-                    JavaTemplate.builder("new ArrayList<>(#{any(int)})")
-                    .imports("java.util.ArrayList")
-                    .build();
-
-                @Override
-                public J visitMethodInvocation(J.MethodInvocation method, ExecutionContext executionContext) {
-                    if (NEW_ARRAY_LIST.matches(method)) {
-                        maybeRemoveImport("com.google.common.collect.Lists");
-                        maybeAddImport("java.util.ArrayList");
-                        return newArrayList.apply(getCursor(), method.getCoordinates().replace());
-                    } else if (NEW_ARRAY_LIST_ITERABLE.matches(method)) {
-                        maybeRemoveImport("com.google.common.collect.Lists");
-                        maybeAddImport("java.util.ArrayList");
-                        return newArrayListIterable.apply(getCursor(), method.getCoordinates().replace(),
-                            method.getArguments().get(0));
-                    } else if (NEW_ARRAY_LIST_CAPACITY.matches(method)) {
-                        maybeRemoveImport("com.google.common.collect.Lists");
-                        maybeAddImport("java.util.ArrayList");
-                        return newArrayListCapacity.apply(getCursor(), method.getCoordinates().replace(),
-                            method.getArguments().get(0));
-                    }
-                    return super.visitMethodInvocation(method, executionContext);
-                }
+        return new JavaVisitor<ExecutionContext>(){
+            @Override
+            public J visitMethodDeclaration(MethodDeclaration method, ExecutionContext p) {
+                Object m=method.getMarkers().findFirst(Range.class);
+                System.out.println("method "+method.getSimpleName()+m );
+                return super.visitMethodDeclaration(method, p);
             }
-        );
+        };
+       
+    
     }
 }
