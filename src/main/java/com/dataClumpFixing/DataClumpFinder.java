@@ -38,7 +38,7 @@ import org.openrewrite.marker.Range;
 import com.google.gson.Gson;
 @Value
 @EqualsAndHashCode(callSuper = true)
-public class DataClumpFixer extends Recipe {
+public class DataClumpFinder extends Recipe {
     private static final MethodMatcher NEW_ARRAY_LIST = new MethodMatcher("com.google.common.collect.Lists newArrayList()");
     private static final MethodMatcher NEW_ARRAY_LIST_ITERABLE = new MethodMatcher("com.google.common.collect.Lists newArrayList(java.lang.Iterable)");
     private static final MethodMatcher NEW_ARRAY_LIST_CAPACITY = new MethodMatcher("com.google.common.collect.Lists newArrayListWithCapacity(int)");
