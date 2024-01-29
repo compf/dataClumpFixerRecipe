@@ -34,273 +34,131 @@ import org.openrewrite.java.tree.J.MethodDeclaration;
 import org.openrewrite.java.tree.J.VariableDeclarations;
 import org.openrewrite.java.tree.J.VariableDeclarations.NamedVariable;
 import org.openrewrite.marker.Range;
-
+import java.util.ArrayList;
+import java.util.HashMap;
 import com.google.gson.Gson;
+
 @Value
 @EqualsAndHashCode(callSuper = true)
 public class DataClumpFinder extends Recipe {
-    private static final MethodMatcher NEW_ARRAY_LIST = new MethodMatcher("com.google.common.collect.Lists newArrayList()");
-    private static final MethodMatcher NEW_ARRAY_LIST_ITERABLE = new MethodMatcher("com.google.common.collect.Lists newArrayList(java.lang.Iterable)");
-    private static final MethodMatcher NEW_ARRAY_LIST_CAPACITY = new MethodMatcher("com.google.common.collect.Lists newArrayListWithCapacity(int)");
+    private static final MethodMatcher NEW_ARRAY_LIST = new MethodMatcher(
+            "com.google.common.collect.Lists newArrayList()");
+    private static final MethodMatcher NEW_ARRAY_LIST_ITERABLE = new MethodMatcher(
+            "com.google.common.collect.Lists newArrayList(java.lang.Iterable)");
+    private static final MethodMatcher NEW_ARRAY_LIST_CAPACITY = new MethodMatcher(
+            "com.google.common.collect.Lists newArrayListWithCapacity(int)");
 
     @Override
     public String getDisplayName() {
-        //language=markdown
+        // language=markdown
         return "Use `new ArrayList<>()` instead of Guava";
     }
 
     @Override
     public String getDescription() {
-        //language=markdown
+        // language=markdown
         return "Prefer the Java standard library over third-party usage of Guava in simple cases like this.";
     }
 
+   
+    private HashMap<String, VariablesHolder> variablesMap = new HashMap<>();
 
-
-final String methodParameterDCTest =
-    "{" +
-    "    'type':'data_clump'," +
-    "    'key':'parameters_to_parameters_data_clump-lib/src/main/java/org/example/MathStuff.java-org/example/MathStuff/method/printLength(int x, int y, int z)-org/example/MathStuff/method/printMax(int x, int y, int z)-xyz'," +
-    "    'probability':1," +
-    "    'from_file_path':'src/main/java/org/example/MathStuff.java'," +
-    "    'from_class_or_interface_name':'MathStuff'," +
-    "    'from_class_or_interface_key':'org.example.MathStuff'," +
-    "    'from_method_name':'printLength'," +
-    "    'from_method_key':'org.example.MathStuff/method/printLength(int x, int y, int z)'," +
-    "    'to_file_path':'src/main/java/org/example/MathStuff.java'," +
-    "    'to_class_or_interface_name':'MathStuff'," +
-    "    'to_class_or_interface_key':'org.example.MathStuff'," +
-    "    'to_method_name':'printMax'," +
-    "    'to_method_key':'org.example.MathStuff/method/printMax(int x, int y, int z)'," +
-    "    'data_clump_type':'parameters_to_parameters_data_clump'," +
-    "    'data_clump_data':{" +
-    "        'org/example/MathStuff/method/printLength(int x, int y, int z)/parameter/x':{" +
-    "            'key':'org.example.MathStuff/method/printLength(int x, int y, int z)/parameter/x'," +
-    "            'name':'x'," +
-    "            'type':'int'," +
-    "            'probability':1," +
-    "            'modifiers':[]," +
-    "            'to_variable':{" +
-    "                'key':'org.example.MathStuff/method/printMax(int x, int y, int z)/parameter/x'," +
-    "                'name':'x'," +
-    "                'type':'int'," +
-    "                'modifiers':[]," +
-    "                'position':{" +
-    "                    'startLine':13," +
-    "                    'startColumn':30," +
-    "                    'endLine':13," +
-    "                    'endColumn':31" +
-    "                }" +
-    "            }," +
-    "            'position':{" +
-    "                'startLine':5," +
-    "                'startColumn':33," +
-    "                'endLine':5," +
-    "                'endColumn':34" +
-    "            }" +
-    "        }," +
-    "        'org/example/MathStuff/method/printLength(int x, int y, int z)/parameter/y':{" +
-    "            'key':'org.example.MathStuff/method/printLength(int x, int y, int z)/parameter/y'," +
-    "            'name':'y'," +
-    "            'type':'int'," +
-    "            'probability':1," +
-    "            'modifiers':[]," +
-    "            'to_variable':{" +
-    "                'key':'org.example.MathStuff/method/printMax(int x, int y, int z)/parameter/y'," +
-    "                'name':'y'," +
-    "                'type':'int'," +
-    "                'modifiers':[]," +
-    "                'position':{" +
-    "                    'startLine':13," +
-    "                    'startColumn':37," +
-    "                    'endLine':13," +
-    "                    'endColumn':38" +
-    "                }" +
-    "            }," +
-    "            'position':{" +
-    "                'startLine':5," +
-    "                'startColumn':40," +
-    "                'endLine':5," +
-    "                'endColumn':41" +
-    "            }" +
-    "        }," +
-    "        'org/example/MathStuff/method/printLength(int x, int y, int z)/parameter/z':{" +
-    "            'key':'org.example.MathStuff/method/printLength(int x, int y, int z)/parameter/z'," +
-    "            'name':'z'," +
-    "            'type':'int'," +
-    "            'probability':1," +
-    "            'modifiers':[]," +
-    "            'to_variable':{" +
-    "                'key':'org.example.MathStuff/method/printMax(int x, int y, int z)/parameter/z'," +
-    "                'name':'z'," +
-    "                'type':'int'," +
-    "                'modifiers':[]," +
-    "                'position':{" +
-    "                    'startLine':13," +
-    "                    'startColumn':44," +
-    "                    'endLine':13," +
-    "                    'endColumn':45" +
-    "                }" +
-    "            }," +
-    "            'position':{" +
-    "                'startLine':5," +
-    "                'startColumn':47," +
-    "                'endLine':5," +
-    "                'endColumn':48" +
-    "            }" +
-    "        }" +
-    "    }" +
-    "}";
-
-    final String fieldDCTest =
-    "{\n" +
-    "    'type':'data_clump',\n" +
-    "    'key':'parameters_to_parameters_data_clump-lib/src/main/java/org/example/MathStuff.java-org/example/MathStuff/method/printLength(int x, int y, int z)-org/example/MathStuff/method/printMax(int x, int y, int z)-xyz',\n" +
-    "    'probability':1,\n" +
-    "    'from_file_path':'src/main/java/org/example/MathStuff.java',\n" +
-    "    'from_class_or_interface_name':'MathStuff',\n" +
-    "    'from_class_or_interface_key':'org.example.MathStuff',\n" +
-    "    'to_file_path':'src/main/java/org/example/Library.java',\n" +
-    "    'to_class_or_interface_name':'Library',\n" +
-    "    'to_class_or_interface_key':'org.example.Library',\n" +
-    "    'data_clump_type':'fields_to_fields_data_clump',\n" +
-    "    'data_clump_data':{\n" +
-    "        'org/example/MathStuff/method/printLength(int x, int y, int z)/parameter/x':{\n" +
-    "            'key':'org.example.MathStuff/method/printLength(int x, int y, int z)/parameter/x',\n" +
-    "            'name':'sign',\n" +
-    "            'type':'boolean',\n" +
-    "            'probability':1,\n" +
-    "            'modifiers':[],\n" +
-    "            'to_variable':{\n" +
-    "                'key':'org.example.MathStuff/method/printMax(int x, int y, int z)/parameter/x',\n" +
-    "                'name':'sign',\n" +
-    "                'type':'boolean',\n" +
-    "                'modifiers':[],\n" +
-    "                'position':{\n" +
-    "                    'startLine':13,\n" +
-    "                    'startColumn':30,\n" +
-    "                    'endLine':13,\n" +
-    "                    'endColumn':31\n" +
-    "                }\n" +
-    "            },\n" +
-    "            'position':{\n" +
-    "                'startLine':5,\n" +
-    "                'startColumn':33,\n" +
-    "                'endLine':5,\n" +
-    "                'endColumn':34\n" +
-    "            }\n" +
-    "        },\n" +
-    "        'org/example/MathStuff/method/printLength(int x, int y, int z)/parameter/y':{\n" +
-    "            'key':'org.example.MathStuff/method/printLength(int x, int y, int z)/parameter/y',\n" +
-    "            'name':'mantissa',\n" +
-    "            'type':'double',\n" +
-    "            'probability':1,\n" +
-    "            'modifiers':[],\n" +
-    "            'to_variable':{\n" +
-    "                'key':'org.example.MathStuff/method/printMax(int x, int y, int z)/parameter/y',\n" +
-    "                'name':'mantissa',\n" +
-    "                'type':'double',\n" +
-    "                'modifiers':[],\n" +
-    "                'position':{\n" +
-    "                    'startLine':13,\n" +
-    "                    'startColumn':37,\n" +
-    "                    'endLine':13,\n" +
-    "                    'endColumn':38\n" +
-    "                }\n" +
-    "            },\n" +
-    "            'position':{\n" +
-    "                'startLine':5,\n" +
-    "                'startColumn':40,\n" +
-    "                'endLine':5,\n" +
-    "                'endColumn':41\n" +
-    "            }\n" +
-    "        },\n" +
-    "        'org/example/MathStuff/method/printLength(int x, int y, int z)/parameter/z':{\n" +
-    "            'key':'org.example.MathStuff/method/printLength(int x, int y, int z)/parameter/z',\n" +
-    "            'name':'exponent',\n" +
-    "            'type':'int',\n" +
-    "            'probability':1,\n" +
-    "            'modifiers':[],\n" +
-    "            'to_variable':{\n" +
-    "                'key':'org.example.MathStuff/method/printMax(int x, int y, int z)/parameter/z',\n" +
-    "                'name':'exponent',\n" +
-    "                'type':'int',\n" +
-    "                'modifiers':[],\n" +
-    "                'position':{\n" +
-    "                    'startLine':13,\n" +
-    "                    'startColumn':44,\n" +
-    "                    'endLine':13,\n" +
-    "                    'endColumn':45\n" +
-    "                }\n" +
-    "            },\n" +
-    "            'position':{\n" +
-    "                'startLine':5,\n" +
-    "                'startColumn':47,\n" +
-    "                'endLine':5,\n" +
-    "                'endColumn':48\n" +
-    "            }\n" +
-    "        }\n" +
-    "    }\n" +
-    "}";
-
-    private HashSet<String> dataClumpMethods=null;
-    private void init(){
-        DataClumps.DataClumpTypeContext context=new Gson().fromJson(methodParameterDCTest, DataClumps.DataClumpTypeContext.class);
-        
+   
+    public VariablesHolder getExistingClassVariableHolder(ClassDeclaration classDecl) {
+        return variablesMap.get(classDecl.getType().getFullyQualifiedName());
     }
+
+    public void checkDataClumps() {
+        Object[] holdersObject =variablesMap.values().toArray();
+        VariablesHolder[] holders = new VariablesHolder[holdersObject.length];
+        for(int i=0;i<holdersObject.length;i++){
+            holders[i]=(VariablesHolder)holdersObject[i];
+        }
+       for(int i=0;i<holders.length;i++){
+        for(int j=i+1;j<holders.length;j++){
+            if(VariablesHolder.checkDataClump(holders[i], holders[j])){
+                System.out.println("############# Start data clump #############");
+                System.out.println(holders[i].getClassReference().getType().getFullyQualifiedName() + ":::" +( holders[i].getMethodReference()!=null ?holders[i].getMethodReference().getSimpleName():" null"));
+                System.out.println(holders[i].toString());
+                System.out.println();
+                System.out.println(holders[j].getClassReference().getType().getFullyQualifiedName() + ":::" + (holders[j].getMethodReference()!=null ?holders[j].getMethodReference().getSimpleName():" null"));
+                System.out.println(holders[j].toString());
+                System.out.println("############# End data clump #############");
+                System.out.println();
+            }
+        }
+       }
+    }
+
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
-        return new JavaVisitor<ExecutionContext>(){
-      
+        JavaVisitor<ExecutionContext> visitor= new JavaVisitor<ExecutionContext>() {
+
             @Override
-            public J visitClassDeclaration (ClassDeclaration cld, ExecutionContext p) {
-                String qualified=cld.getType().getFullyQualifiedName();
-                JavaVisitor<ExecutionContext> classVisitor=this;
-                 cld.accept(new JavaVisitor<ExecutionContext>(){
+            public J visitClassDeclaration(ClassDeclaration cld, ExecutionContext p) {
+                String qualified = cld.getType().getFullyQualifiedName();
+                JavaVisitor<ExecutionContext> classVisitor = this;
+                cld.accept(new JavaVisitor<ExecutionContext>() {
                     @Override
                     public J visitClassDeclaration(ClassDeclaration classDecl, ExecutionContext p) {
-                        if(classDecl==cld)return super.visitClassDeclaration(classDecl, p);
+                        if (classDecl == cld)
+                            return super.visitClassDeclaration(classDecl, p);
                         return classVisitor.visitClassDeclaration(classDecl, p);
                     }
-                
+
                     @Override
                     public J visitMethodDeclaration(MethodDeclaration method, ExecutionContext p) {
-                        String fullyQualified=qualified+"."+method.getSimpleName()+"";
-                        method.accept(new JavaVisitor<ExecutionContext>(){
+                        String fullyQualified = qualified + "." + method.getSimpleName() ;
+                        if(method.getMethodType().isConstructor()){
+                            return null;
+                        }
+                        method.accept(new JavaVisitor<ExecutionContext>() {
                             @Override
                             public J visitBlock(Block block, ExecutionContext p) {
                                 return null;
                             }
                         }, p);
-                        for(Statement param:method.getParameters()){
-                               param.accept(new JavaVisitor<ExecutionContext>(){
+                       final VariablesHolder methodHolder = variablesMap.get(fullyQualified)!=null? variablesMap.get(fullyQualified): new VariablesHolder(cld, method) ;
+                        
+                        variablesMap.put(fullyQualified, methodHolder);
+                        
+                        for (Statement param : method.getParameters()) {
+                            param.accept(new JavaVisitor<ExecutionContext>() {
                                 @Override
-                                public J visitVariable(org.openrewrite.java.tree.J.VariableDeclarations.NamedVariable variable, ExecutionContext p) {
-                                    System.out.println("param "+variable.getType().toString()+" "+variable.getSimpleName());
+                                public J visitVariable(
+                                        org.openrewrite.java.tree.J.VariableDeclarations.NamedVariable variable,
+                                        ExecutionContext p) {
+                                    methodHolder.addVariable(variable.getType().toString(), variable.getSimpleName());
                                     return super.visitVariable(variable, p);
                                 };
-                              }, p);
+                            }, p);
+
                         }
-                        System.out.println(fullyQualified);
-                        
+
                         return null;
                     }
+
                     @Override
                     public J visitVariable(NamedVariable variable, ExecutionContext p) {
-                        System.out.println("field " +variable.getType().toString()+" "+variable.getSimpleName());
+                        VariablesHolder classHolder = getExistingClassVariableHolder(cld);
+                        if (classHolder == null) {
+                            classHolder = new VariablesHolder(cld, null);
+                            variablesMap.put(qualified, classHolder);
+                        }
+                        classHolder.addVariable(variable.getType().toString(), variable.getSimpleName());
+                        //System.out.println("field " + variable.getType().toString() + " " + variable.getSimpleName());
 
                         return super.visitVariable(variable, p);
                     }
-                   
-                   
-                
+
                 }, p);
+
                 return super.visitClassDeclaration(cld, p);
-          
+
+            };
+
         };
-       
-    
-    
-};
+        checkDataClumps();
+        return visitor;
     }
 }
