@@ -27,7 +27,12 @@ import org.openrewrite.java.*;
 import org.openrewrite.java.search.UsesMethod;
 import org.openrewrite.java.tree.J;
 import org.openrewrite.java.tree.JavaCoordinates;
+import org.openrewrite.java.tree.Statement;
+import org.openrewrite.java.tree.J.Block;
+import org.openrewrite.java.tree.J.ClassDeclaration;
 import org.openrewrite.java.tree.J.MethodDeclaration;
+import org.openrewrite.java.tree.J.VariableDeclarations;
+import org.openrewrite.java.tree.J.VariableDeclarations.NamedVariable;
 import org.openrewrite.marker.Range;
 
 import com.google.gson.Gson;
@@ -246,14 +251,56 @@ final String methodParameterDCTest =
     @Override
     public TreeVisitor<?, ExecutionContext> getVisitor() {
         return new JavaVisitor<ExecutionContext>(){
+      
             @Override
-            public J visitMethodDeclaration(MethodDeclaration method, ExecutionContext p) {
-                Object m=method.getMarkers().findFirst(Range.class);
-                System.out.println("method "+method.getSimpleName()+m );
-                return super.visitMethodDeclaration(method, p);
-            }
+            public J visitClassDeclaration (ClassDeclaration cld, ExecutionContext p) {
+                String qualified=cld.getType().getFullyQualifiedName();
+                JavaVisitor<ExecutionContext> classVisitor=this;
+                 cld.accept(new JavaVisitor<ExecutionContext>(){
+                    @Override
+                    public J visitClassDeclaration(ClassDeclaration classDecl, ExecutionContext p) {
+                        if(classDecl==cld)return super.visitClassDeclaration(classDecl, p);
+                        return classVisitor.visitClassDeclaration(classDecl, p);
+                    }
+                
+                    @Override
+                    public J visitMethodDeclaration(MethodDeclaration method, ExecutionContext p) {
+                        String fullyQualified=qualified+"."+method.getSimpleName()+"";
+                        method.accept(new JavaVisitor<ExecutionContext>(){
+                            @Override
+                            public J visitBlock(Block block, ExecutionContext p) {
+                                return null;
+                            }
+                        }, p);
+                        for(Statement param:method.getParameters()){
+                               param.accept(new JavaVisitor<ExecutionContext>(){
+                                @Override
+                                public J visitVariable(org.openrewrite.java.tree.J.VariableDeclarations.NamedVariable variable, ExecutionContext p) {
+                                    System.out.println("param "+variable.getType().toString()+" "+variable.getSimpleName());
+                                    return super.visitVariable(variable, p);
+                                };
+                              }, p);
+                        }
+                        System.out.println(fullyQualified);
+                        
+                        return null;
+                    }
+                    @Override
+                    public J visitVariable(NamedVariable variable, ExecutionContext p) {
+                        System.out.println("field " +variable.getType().toString()+" "+variable.getSimpleName());
+
+                        return super.visitVariable(variable, p);
+                    }
+                   
+                   
+                
+                }, p);
+                return super.visitClassDeclaration(cld, p);
+          
         };
        
     
+    
+};
     }
 }
